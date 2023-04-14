@@ -1,117 +1,63 @@
-import { component$ } from '@builder.io/qwik';
-import type { DocumentHead } from '@builder.io/qwik-city';
+import { component$, useSignal } from "@builder.io/qwik";
+import type { DocumentHead } from "@builder.io/qwik-city";
+import { Form, routeAction$, routeLoader$ } from "@builder.io/qwik-city";
+import { TodoList } from "~/components/todo-list";
+import { loadEnv } from "vite";
 
-import Counter from '~/components/starter/counter/counter';
-import Hero from '~/components/starter/hero/hero';
-import Infobox from '~/components/starter/infobox/infobox';
-import Starter from '~/components/starter/next-steps/next-steps';
+loadEnv(process.env.ENV_MODE!, "~/../", "VITE_");
+import { supabase } from "~/db";
+import type { Todo } from "~/types";
+// import { InputForm } from "~/components/input-form";
+
+export const useAddTodoAction = routeAction$((props) => {
+  console.log("Todo", props);
+});
+
+export const useTodos = routeLoader$(async () => {
+  const { data: todos } = await supabase.from("todo").select("*");
+
+  return todos as Todo[];
+});
 
 export default component$(() => {
+  const todoAction = useAddTodoAction();
+
+  const todoText = useSignal("");
+
+  const todos = useTodos();
+
   return (
-    <>
-      <Hero />
-
-      <div class="section bright">
-        <div class="container center">
-          <Starter />
+    <div class="max-w-md mx-auto mt-4 px-2 pt-4">
+      <h1 class="text-4xl mb-4 text-center">Todo App</h1>
+      <Form action={todoAction}>
+        <div class="flex gap-2 w-full">
+          <input
+            type="text"
+            bind:value={todoText}
+            class="border flex-1 py-1 px-2 rounded-md"
+          />
+          <button
+            type="submit"
+            class="bg-blue-500 py-1 px-2 rounded-md text-slate-100"
+          >
+            Add
+          </button>
         </div>
+      </Form>
+
+      <div class="my-4">
+        <TodoList todos={todos.value} />
       </div>
-
-      <div class="section">
-        <div class="container center">
-          <h3>
-            You can <b>count</b> on me
-          </h3>
-          <Counter />
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="container topics">
-          <Infobox>
-            <div q:slot="title" class="icon icon-cli">
-              CLI Commands
-            </div>
-            <>
-              <p>
-                <code>npm run dev</code>
-                <br />
-                Starts the development server and watches for changes
-              </p>
-              <p>
-                <code>npm run preview</code>
-                <br />
-                Creates production build and starts a server to preview it
-              </p>
-              <p>
-                <code>npm run build</code>
-                <br />
-                Creates production build
-              </p>
-              <p>
-                <code>npm run qwik add</code>
-                <br />
-                Runs the qwik CLI to add integrations
-              </p>
-            </>
-          </Infobox>
-
-          <div>
-            <Infobox>
-              <div q:slot="title" class="icon icon-apps">
-                Example Apps
-              </div>
-              <p>
-                Have a look at the <a href="/demo/flower">Flower App</a> or the{' '}
-                <a href="/demo/todolist">Todo App</a>.
-              </p>
-            </Infobox>
-
-            <Infobox>
-              <div q:slot="title" class="icon icon-community">
-                Community
-              </div>
-              <ul>
-                <li>
-                  <span>Questions or just want to say hi? </span>
-                  <a href="https://qwik.builder.io/chat" target="_blank">
-                    Chat on discord!
-                  </a>
-                </li>
-                <li>
-                  <span>Follow </span>
-                  <a href="https://twitter.com/QwikDev" target="_blank">
-                    @QwikDev
-                  </a>
-                  <span> on Twitter</span>
-                </li>
-                <li>
-                  <span>Open issues and contribute on </span>
-                  <a href="https://github.com/BuilderIO/qwik" target="_blank">
-                    GitHub
-                  </a>
-                </li>
-                <li>
-                  <span>Watch </span>
-                  <a href="https://qwik.builder.io/media/" target="_blank">
-                    Presentations, Podcasts, Videos, etc.
-                  </a>
-                </li>
-              </ul>
-            </Infobox>
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 });
 
 export const head: DocumentHead = {
-  title: 'Welcome to Qwik',
+  title: "Qwik Todo",
   meta: [
     {
-      name: 'description',
-      content: 'Qwik site description',
+      name: "description",
+      content: "Yet another Todo App built with Qwik",
     },
   ],
 };
