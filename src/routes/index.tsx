@@ -1,39 +1,60 @@
-import { component$, useSignal } from "@builder.io/qwik";
+import { component$, useContextProvider } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
+import { z, zod$ } from "@builder.io/qwik-city";
 import { Form, routeAction$, routeLoader$ } from "@builder.io/qwik-city";
 import { TodoList } from "~/components/todo-list";
-import { loadEnv } from "vite";
-
-loadEnv(process.env.ENV_MODE!, "~/../", "VITE_");
+import { todosContextId } from "~/context/todos.context";
 import { supabase } from "~/db";
 import type { Todo } from "~/types";
-// import { InputForm } from "~/components/input-form";
 
-export const useAddTodoAction = routeAction$((props) => {
-  console.log("Todo", props);
-});
+export const todos: Todo[] = [];
 
-export const useTodos = routeLoader$(async () => {
-  const { data: todos } = await supabase.from("todo").select("*");
+export const useAddToListAction = routeAction$(
+  async (data) => {
+    const { data: todo } = await supabase
+      .from("todo")
+      .insert({
+        title: data.title,
+      })
+      .select("*");
+    console.log({ todo, data });
+    if (todo?.length) {
+      todos.push(todo[0] as Todo);
+    }
+    return {
+      success: true,
+      todo: todo?.length ? todo[0] : null,
+    };
+  },
+  zod$({
+    title: z.string().trim().min(1),
+  })
+);
+
+export const useTodosLoader = routeLoader$(async () => {
+  const { data: todos } = await supabase
+    .from("todo")
+    .select("*")
+    .order("created_at", { ascending: false });
 
   return todos as Todo[];
 });
 
 export default component$(() => {
-  const todoAction = useAddTodoAction();
+  const action = useAddToListAction();
 
-  const todoText = useSignal("");
-
-  const todos = useTodos();
+  const todos = useTodosLoader();
+  useContextProvider(todosContextId, todos);
 
   return (
     <div class="max-w-md mx-auto mt-4 px-2 pt-4">
       <h1 class="text-4xl mb-4 text-center">Todo App</h1>
-      <Form action={todoAction}>
+
+      <Form action={action} spaReset>
         <div class="flex gap-2 w-full">
           <input
             type="text"
-            bind:value={todoText}
+            name="title"
             class="border flex-1 py-1 px-2 rounded-md"
           />
           <button
